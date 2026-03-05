@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星途计划 - 自闭症公益项目官网</title>
+    <!-- 外部资源引入 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        starBlue: '#1E88E5', // 主色：星空蓝
+                        starOrange: '#FF9800', // 辅助色：暖橙
+                        starGray: '#F5F7FA', // 背景浅灰
+                        starDark: '#333333', // 文字深灰
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <!-- 自定义样式 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .btn-hover {
+                @apply transition-all duration-300 hover:scale-105 hover:shadow-lg;
+            }
+            .card-animate {
+                @apply transition-all duration-500 hover:shadow-xl;
+            }
+            .text-balance {
+                text-wrap: balance;
+            }
+            /* 隐藏视频控制栏及点击生成的控制元素 */
+            .video-no-controls::-webkit-media-controls {
+                display: none !important;
+            }
+            .video-no-controls {
+                pointer-events: none; /* 禁止点击触发控制栏 */
+                user-select: none; /* 禁止选中 */
+            }
+            /* 视频播放状态阴影效果 */
+            .video-container {
+                cursor: pointer;
+                transition: all 0.3s ease; /* 平滑过渡效果 */
+            }
+            .video-container:hover {
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+                transform: translateY(2px); /* 轻微下沉效果 */
+            }
+            /* 模态框遮罩层样式 - 统一淡入淡出过渡 */
+            .modal-backdrop {
+                @apply fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300;
+            }
+            /* 模态框激活状态 */
+            .modal-backdrop.active {
+                @apply opacity-100 pointer-events-auto;
+            }
+            /* 模态框内容样式 - 统一缩放+淡入过渡 */
+            .modal-content {
+                @apply bg-white rounded-xl p-6 md:p-8 w-[90%] max-w-md max-h-[90vh] overflow-y-auto opacity-0 scale-95 transition-all duration-300;
+            }
+            /* 岗位详情弹窗宽度调整 */
+            .modal-content.job-detail {
+                @apply max-w-2xl;
+            }
+            /* 模态框内容激活状态 */
+            .modal-backdrop.active .modal-content {
+                @apply opacity-100 scale-100;
+            }
+
+            /* ========== 移动端右侧滑入菜单核心样式 ========== */
+            .mobile-menu {
+                @apply fixed top-0 right-0 h-full w-[280px] bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out;
+            }
+            .mobile-menu.active {
+                @apply translate-x-0;
+            }
+            .menu-overlay {
+                @apply fixed inset-0 bg-black/30 z-40 opacity-0 pointer-events-none transition-opacity duration-300;
+            }
+            .menu-overlay.active {
+                @apply opacity-100 pointer-events-auto;
+            }
+
+            /* ========== 移除导航栏滚动样式，保留固定定位 ========== */
+            .fixed-nav {
+                @apply fixed top-0 left-0 right-0 z-50 w-full bg-white shadow-md py-3;
+            }
+            .icon-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        }
+    </style>
+</head>
+<body class="bg-starGray text-starDark font-sans">
+    <!-- 导航栏（仅保留固定定位，移除滚动样式变化） -->
+    <header id="mainHeader" class="fixed-nav">
+        <nav class="container mx-auto px-4 flex flex-wrap items-center justify-between">
+            <!-- Logo 原代码不变 -->
+            <a href="#" class="flex items-center space-x-2">
+                <i class="fa fa-star text-starOrange text-2xl"></i>
+                <span class="text-xl font-bold text-starBlue">星途计划</span>
+            </a>
+            
+            <!-- 移动端菜单按钮 -->
+            <button id="menuBtn" class="lg:hidden text-starDark text-xl z-50">
+                <i class="fa fa-bars"></i>
+            </button>
+
+            <!-- 移动端右侧菜单容器 + 遮罩层 -->
+            <div id="menuOverlay" class="menu-overlay"></div>
+            <div id="mobileNavMenu" class="mobile-menu p-4">
+                <div class="flex justify-between items-center mb-6 border-b pb-3">
+                    <span class="font-bold text-starBlue">导航菜单</span>
+                    <button id="closeMenuBtn" class="text-gray-500 text-xl">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+                <!-- 菜单列表 -->
+                <ul class="space-y-4">
+                    <li><a href="#home" class="py-2 block hover:text-starBlue transition-colors">首页</a></li>
+                    <li><a href="#screening" class="py-2 block hover:text-starBlue transition-colors">AI早筛</a></li>
+                    <li><a href="#intervention" class="py-2 block hover:text-starBlue transition-colors">匹配系统</a></li>
+                    <li><a href="#employment" class="py-2 block hover:text-starBlue transition-colors">家庭筛查</a></li>
+                    <li><a href="#volunteer" class="py-2 block hover:text-starBlue transition-colors">对比优势</a></li>
+                    <li><a href="#publicity" class="py-2 block hover:font-medium transition-colors">公益宣传</a></li>
+                    
+                    <li class="pt-4 border-t">
+                        <button id="mobileContactBtn" class="w-full bg-starOrange text-white px-4 py-2 rounded-md btn-hover">联系我们</button>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- 桌面端导航 原代码完全不变 -->
+            <div id="navMenu" class="hidden w-full lg:flex lg:w-auto lg:items-center mt-3 lg:mt-0">
+                <ul class="flex flex-col lg:flex-row lg:space-x-8">
+                    <li><a href="#home" class="py-2 hover:text-starBlue transition-colors">首页</a></li>
+                    <li><a href="#screening" class="py-2 hover:text-starBlue transition-colors">AI早筛</a></li>
+                    <li><a href="#intervention" class="py-2 hover:text-starBlue transition-colors">匹配系统</a></li>
+                    <li><a href="#employment" class="py-2 hover:text-starBlue transition-colors">家庭筛查</a></li>
+                    <li><a href="#volunteer" class="py-2 hover:text-starBlue transition-colors">对比优势</a></li>
+                    <li><a href="#publicity" class="py-2 hover: font-medium transition-colors">公益宣传</a></li>
+                    
+                </ul>
+                <div class="mt-4 lg:mt-0 lg:ml-4">
+                    <button id="contactBtn" class="bg-starOrange text-white px-4 py-2 rounded-md btn-hover">联系我们</button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- 为了避免页面内容被固定导航栏遮挡，添加顶部占位区 -->
+    <div class="h-16 lg:h-20"></div>
+
+    <!-- 岗位详情弹窗 -->
+    <div id="jobDetailModal" class="modal-backdrop">
+        <div class="modal-content job-detail">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-starBlue" id="jobDetailTitle">岗位详情</h3>
+                <button id="closeJobModal" class="text-gray-500 hover:text-starDark text-xl transition-colors">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div id="jobDetailContent" class="prose max-w-none">
+                <!-- 岗位详情内容将通过JS动态填充 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 我们欢迎您弹窗 -->
+    <div id="welcomeModal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-starBlue">我们欢迎您</h3>
+                <button id="closeWelcomeModal" class="text-gray-500 hover:text-starDark text-xl transition-colors">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="text-center space-y-4">
+                <div class="bg-starBlue/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fa fa-heart text-starBlue text-3xl"></i>
+                </div>
+                <p class="text-lg">请输入联系方式，再次感谢您对自闭症儿童的关爱</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 联系我们弹窗 -->
+    <div id="contactModal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-starBlue">联系我们</h3>
+                <button id="closeModal" class="text-gray-500 hover:text-starDark text-xl transition-colors">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <p class="text-gray-600 mb-6 text-center">遇到关于自闭症的困难，我们来帮助您</p>
+            <form id="contactForm">
+                <div class="space-y-4">
+                    <div>
+                        <label for="name" class="block text-gray-700 mb-2">姓名</label>
+                        <input type="text" id="name" name="name" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-starBlue focus:border-transparent transition-all">
+                    </div>
+                    <div>
+                        <label for="phone" class="block text-gray-700 mb-2">手机号码</label>
+                        <input type="tel" id="phone" name="phone" required pattern="[0-9]{11}"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-starBlue focus:border-transparent transition-all">
+                    </div>
+                    <div>
+                        <label for="email" class="block text-gray-700 mb-2">电子邮箱</label>
+                        <input type="email" id="email" name="email" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-starBlue focus:border-transparent transition-all">
+                    </div>
+                    <div>
+                        <label for="message" class="block text-gray-700 mb-2">问题描述（可选）</label>
+                        <textarea id="message" name="message" rows="4"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-starBlue focus:border-transparent transition-all"
+                            placeholder="请简要描述您遇到的问题或需求..."></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-starBlue text-white py-3 rounded-md btn-hover mt-4">
+                        提交申请
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <main>
+  <!-- 1. 首页Banner - 1:1还原参考图 + 流程单行居中 -->
+<section id="home" class="relative overflow-hidden bg-[#FFF8F0] py-10 md:py-16 lg:py-20">
+    <!-- 背景图（参考图的暖色调亲子背景） -->
+    <div class="absolute inset-0 z-0">
+        <img src="wenxinmuziyongbaotupian-26822814_1.jpg" 
+             alt="温馨亲子互动背景" class="w-full h-full object-cover">
+    </div>
+    
+    <div class="container mx-auto px-4 relative z-10 flex flex-col items-center text-center">
+        <!-- 标题区域 -->
+        <div class="mb-6">
+            <h2 class="text-body font-medium text-starDark mb-2">星途：AI早筛·精准康复</h2>
+            <h1 class="text-[clamp(2rem,8vw,3.5rem)] font-bold text-white drop-shadow-md">立即免费筛查</h1>
+        </div>
+
+        <!-- 橙色大按钮 -->
+        <button class="bg-starOrange text-white text-title font-bold py-3 px-8 rounded-full btn-hover shadow-lg mb-3">
+            <a href="#employment">立即免费筛查</a>
+        </button>
+
+        <!-- 按钮下方说明 -->
+        <p class="text-body text-starDark mb-8">0-6岁儿童专属，哈医大团队背书，早筛1次，覆盖语言/社交/运动3大发育维度</p>
+
+        <!-- 三步流程模块（单行居中显示 + 图标修复） -->
+        <div class="w-full max-w-6xl bg-white/90 rounded-xl p-5 shadow-md">
+            <!-- 核心调整：用flex + justify-center + items-center 实现单行居中 -->
+            <div class="flex justify-center items-center w-full gap-6">
+                <div class="flex flex-col items-center flex-shrink-0 w-1/4">
+                    <div class="w-14 h-14 bg-[#F0F8FF] rounded-full flex items-center justify-center mb-2">
+                        <i class="fa fa-user-plus text-[#4A90E2] text-xl"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-starDark">儿童信息</h3>
+                    <p class="text-xs text-gray-600">年龄/性别/生长环境</p>
+                </div>
+                
+                <!-- 流程箭头（始终显示，不再隐藏） -->
+                <div class="text-[#FF7F24] flex-shrink-0">
+                    <i class="fa fa-long-arrow-right text-lg"></i>
+                </div>
+                <!-- 第一步：拍摄 -->
+                <div class="flex flex-col items-center flex-shrink-0 w-1/4">
+                    <div class="w-14 h-14 bg-[#F0F8FF] rounded-full flex items-center justify-center mb-2">
+                        <i class="fa fa-camera text-[#4A90E2] text-xl"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-starDark">拍摄</h3>
+                    <p class="text-xs text-gray-600">互动/表达/运动</p>
+                </div>
+                
+                <!-- 流程箭头（始终显示，不再隐藏） -->
+                <div class="text-[#FF7F24] flex-shrink-0">
+                    <i class="fa fa-long-arrow-right text-lg"></i>
+                </div>
+                
+                <!-- 第二步：AI评估 -->
+                <div class="flex flex-col items-center flex-shrink-0 w-1/4">
+                    <div class="w-14 h-14 bg-[#F0F8FF] rounded-full flex items-center justify-center mb-2">
+                        <i class="fa fa-robot text-[#4A90E2] text-xl"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-starDark">AI评估</h3>
+                    <p class="text-xs text-gray-600">5分钟生成报告</p>
+                </div>
+                
+                <!-- 流程箭头（始终显示） -->
+                <div class="text-[#FF7F24] flex-shrink-0">
+                    <i class="fa fa-long-arrow-right text-lg"></i>
+                </div>
+                
+                <!-- 第三步：对接机构（修复图标为Font Awesome 6.x兼容版本） -->
+                <div class="flex flex-col items-center flex-shrink-0 w-1/4">
+                    <div class="w-14 h-14 bg-[#F0F8FF] rounded-full flex items-center justify-center mb-2">
+                        <i class="fa-solid fa-hospital text-[#4A90E2] text-xl"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-starDark">对接机构</h3>
+                    <p class="text-xs text-gray-600">精准匹配康复资源</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<style>
+    .btn-hover {
+        transition: all 0.3s ease;
+    }
+    .btn-hover:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(255, 127, 36, 0.2);
+    }
+    /* 小屏幕适配：自动缩小元素尺寸，保持单行 */
+    @media (max-width: 640px) {
+        .w-14 {
+            width: 10rem !important;
+            height: 10rem !important;
+        }
+        .text-xl {
+            font-size: 1rem !important;
+        }
+        .gap-6 {
+            gap: 1rem !important;
+        }
+    }
+</style>
+        <!-- 2. 核心数据卡片 -->
+        <section class="py-12 bg-white">
+            <div class="container mx-auto px-4">
+                <!-- 调整为6列布局（大屏），适配新增的2个数据项 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+                    <!-- 原有数据项1：AI筛查准确率 -->
+                    <div class="bg-starGray rounded-lg p-6 card-animate">
+                        <div class="text-starOrange text-3xl mb-2"><i class="fa fa-search"></i></div>
+                        <h3 class="font-bold text-lg mb-2">AI筛查准确率</h3>
+                        <p class="text-3xl font-bold text-starBlue" id="accuracy" data-target="92">0%</p>
+                        <p class="text-sm text-gray-500 mt-1">较传统量表提升35%</p>
+                    </div>
+                    
+                    <!-- 原有数据项2：已服务儿童 -->
+                    <div class="bg-starGray rounded-lg p-6 card-animate">
+                        <div class="text-starOrange text-3xl mb-2"><i class="fa fa-child"></i></div>
+                        <h3 class="font-bold text-lg mb-2">已服务儿童</h3>
+                        <p class="text-3xl font-bold text-starBlue" id="servedKids" data-target="1000">0</p>
+                        <p class="text-sm text-gray-500 mt-1">2024年北京/广州/成都试点</p>
+                    </div>
+                    
+                    <!-- 原有数据项3：志愿者规模 -->
+                    <div class="bg-starGray rounded-lg p-6 card-animate">
+                        <div class="text-starOrange text-3xl mb-2"><i class="fa fa-users"></i></div>
+                        <h3 class="font-bold text-lg mb-2">志愿者规模</h3>
+                        <p class="text-3xl font-bold text-starBlue" id="volunteerCount" data-target="500">0</p>
+                        <p class="text-sm text-gray-500 mt-1">留存率65%，超行业均值20%</p>
+                    </div>
+                    
+                    <!-- 原有数据项4：区分能力准确率 -->
+                    <div class="bg-starGray rounded-lg p-6 card-animate">
+                        <div class="text-starOrange text-3xl mb-2"><i class="fa fa-briefcase"></i></div>
+                        <h3 class="font-bold text-lg mb-2">区分能力准确率</h3>
+                        <p class="text-3xl font-bold text-starBlue" id="jobTarget" data-target="88">0%</p>
+                        <p class="text-sm text-gray-500 mt-1">针对自闭症和其他发育问题</p>
+                    </div>
+                    
+                    <!-- 新增数据项5：覆盖黑龙江省地市 -->
+                    <div class="bg-starGray rounded-lg p-6 card-animate">
+                        <div class="text-starOrange text-3xl mb-2"><i class="fa fa-map-marker-alt"></i></div>
+                        <h3 class="font-bold text-lg mb-2">覆盖黑龙江省城市</h3>
+                        <p class="text-3xl font-bold text-starBlue" id="cityCount" data-target="13">0</p>
+                        <p class="text-sm text-gray-500 mt-1">如大庆、佳木斯、齐齐哈尔</p>
+                    </div>
+                    
+                    <!-- 新增数据项6：合作康复机构 -->
+                    <div class="bg-starGray rounded-lg p-6 card-animate">
+                        <div class="text-starOrange text-3xl mb-2"><i class="fa fa-hospital"></i></div>
+                        <h3 class="font-bold text-lg mb-2">合作康复机构</h3>
+                        <p class="text-3xl font-bold text-starBlue" id="orgCount" data-target="17">0</p>
+                        <p class="text-sm text-gray-500 mt-1">包含三甲医院及专业康复中心</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. AI早筛服务 -->
+        <section id="screening" class="py-16 bg-starGray">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold mb-4">AI智能筛查系统</h2>
+                    <p class="max-w-2xl mx-auto text-gray-600">5分钟完成筛查，准确率92%，大幅降低基层漏诊率</p>
+                    <p>核心技术源自哈医大附属第三医院与西安文理学院儿童认知科学实验室联合研发，基于10万+北方儿童发育数据训练，针对东北方言环境下的语言发育评估做了专项优化，准确率比通用量表高35%</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-8 card-animate">
+                    <div class="w-full h-[550px] flex items-center justify-center bg-starGray/30 rounded-lg overflow-hidden video-container"
+                         onmouseenter="document.getElementById('aiVideo').play()"
+                         onmouseleave="document.getElementById('aiVideo').pause()">
+                        <video 
+                            id="aiVideo"
+                            class="w-full h-full object-cover video-no-controls"
+                            muted 
+                            playsinline 
+                            webkit-playsinline 
+                            preload="metadata"
+                            poster=""
+                        >
+                            <source src="1.mp4" type="video/mp4">
+                            您的浏览器不支持HTML5视频播放，请升级浏览器后重试
+                        </video>
+                    </div>
+                    <div class="mt-6 text-center">
+                        <p class="text-gray-600">提示：鼠标悬浮即可静音自动播放演示视频</p>
+                    </div>
+                    <div style="padding: 12px;">
+                    <p>注意：①本筛查工具经哈医大附属第一医院验证，准确率达92%；
+                    ②筛查仅为初步评估，不能替代临床诊断；
+                    ③高风险儿童可直接走医院绿色就诊通道；
+                    ④报告可下载打印，支持医保报销时作为辅助材料；
+                    ⑤复查周期建议低风险6个月1次，中高风险3个月1次。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+       <!-- 4. 核心模块2：“早筛-康复”数据闭环与方案匹配系统 -->
+        <section id="intervention" class="py-16 bg-white">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold mb-4">“早筛-康复”数据闭环与方案匹配系统</h2>
+                    <p class="max-w-2xl mx-auto text-gray-600">打通筛查数据与康复方案，个性化匹配干预资源，降低家庭负担超80%</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                    <div class="bg-starGray rounded-lg p-6 text-center card-animate">
+                        <div class="bg-starBlue/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa fa-user-plus text-starBlue text-2xl"></i></div>
+                        <h4 class="font-bold mb-2">筛查数据上传</h4>
+                        <p class="text-sm text-gray-600">家庭端筛查结果自动同步至云端数据中台</p>
+                    </div>
+                    <div class="bg-starGray rounded-lg p-6 text-center card-animate">
+                        <div class="bg-starBlue/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa fa-list-alt text-starBlue text-2xl"></i></div>
+                        <h4 class="font-bold mb-2">风险等级评估</h4>
+                        <p class="text-sm text-gray-600">系统自动分级，生成个性化干预建议</p>
+                    </div>
+                    <div class="bg-starGray rounded-lg p-6 text-center card-animate">
+                        <div class="bg-starBlue/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa fa-random text-starBlue text-2xl"></i></div>
+                        <h4 class="font-bold mb-2">康复资源匹配</h4>
+                        <p class="text-sm text-gray-600">按地域、资质、价格精准匹配康复机构</p>
+                    </div>
+                    <div class="bg-starGray rounded-lg p-6 text-center card-animate">
+                        <div class="bg-starBlue/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa fa-vr-cardboard text-starBlue text-2xl"></i></div>
+                        <h4 class="font-bold mb-2">干预效果追踪</h4>
+                        <p class="text-sm text-gray-600">定期回访更新数据，动态调整干预方案</p>
+                    </div>
+                </div>
+                <div class="bg-starGray rounded-lg p-8">
+                    <h3 class="text-2xl font-bold mb-6 text-center">个性化康复方案展示</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white rounded-lg overflow-hidden shadow-md card-animate">
+                            <img src="社交能力.jpg" alt="社交能力提升方案" class="w-full h-48 object-cover">
+                            <div class="p-4"><h4 class="font-bold mb-2">社交能力提升</h4><p class="text-sm text-gray-600">基于筛查数据定制的场景化社交训练方案</p></div>
+                        </div>
+                        <div class="bg-white rounded-lg overflow-hidden shadow-md card-animate">
+                            <img src="语言发育.jpg" alt="语言发育干预方案" class="w-full h-48 object-cover">
+                            <div class="p-4"><h4 class="font-bold mb-2">语言发育干预</h4><p class="text-sm text-gray-600">针对语言迟缓特征的分级训练计划</p></div>
+                        </div>
+                        <div class="bg-white rounded-lg overflow-hidden shadow-md card-animate">
+                            <img src="行为矫正.jpg" alt="行为矫正方案" class="w-full h-48 object-cover">
+                            <div class="p-4"><h4 class="font-bold mb-2">行为矫正方案</h4><p class="text-sm text-gray-600">适配刻板行为特征的正向引导方案</p></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-starGray rounded-lg p-8">
+                    <h3 class="text-2xl font-bold mb-6 text-center">个性化干预建议</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white rounded-lg overflow-hidden shadow-md card-animate">
+                            <div class="p-4"><h4 class="font-bold mb-2">低风险</h4><p class="text-sm text-gray-600">建议每月通过网站记录儿童发育里程碑，定期参与线上育儿课程</p></div>
+                        </div>
+                        <div class="bg-white rounded-lg overflow-hidden shadow-md card-animate">
+                            
+                            <div class="p-4"><h4 class="font-bold mb-2">中风险</h4><p class="text-sm text-gray-600">推荐哈医大附属第二医院儿童发育行为门诊线下评估，同步对接哈尔滨市儿童医院康复训练体验课</p></div>
+                        </div>
+                        <div class="bg-white rounded-lg overflow-hidden shadow-md card-animate">
+                            
+                            <div class="p-4"><h4 class="font-bold mb-2">高风险</h4><p class="text-sm text-gray-600">优先匹配黑龙江省康复医院专项干预名额，48小时内安排康复师1对1沟通</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+ <!-- 家庭端轻量化自主筛查工具模块 -->
+    <section id="employment" class="py-16 bg-starGray">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold mb-4">家庭端轻量化自主筛查工具</h2>
+                <p class="max-w-2xl mx-auto text-gray-600">微信小程序10分钟自主完成，无需专业设备，基层筛查可及性从30%提升至90%</p>
+            </div>
+
+            <!-- 核心技术特性 -->
+            <div class="bg-white rounded-lg shadow-md p-8 mb-12 card-animate">
+                <h3 class="text-2xl font-bold mb-6 text-center">三大核心技术特性</h3>
+                <p class="text-gray-600 mb-8 text-center max-w-2xl mx-auto">基于微信小程序开发，通过游戏化引导、轻量化适配、AI自动分析，破解“筛查门槛高”核心痛点</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                    <!-- 游戏化引导交互 -->
+                    <div class="text-center p-6 bg-starGray rounded-lg">
+                        <div class="bg-starBlue/10 w-16 h-16 rounded-full icon-container mx-auto mb-4">
+                            <i class="fa-solid fa-gamepad text-starBlue text-2xl"></i>
+                        </div>
+                        <h4 class="font-bold mb-2">游戏化引导交互</h4>
+                        <p class="text-sm text-gray-600">通过指令互动、玩具吸引等趣味流程，自然拍摄10分钟日常互动视频，自动捕获关键行为片段</p>
+                    </div>
+                    <!-- 全设备轻量化适配 -->
+                    <div class="text-center p-6 bg-starGray rounded-lg">
+                        <div class="bg-starBlue/10 w-16 h-16 rounded-full icon-container mx-auto mb-4">
+                            <i class="fa-solid fa-mobile-screen-button text-starBlue text-2xl"></i>
+                        </div>
+                        <h4 class="font-bold mb-2">全设备轻量化适配</h4>
+                        <p class="text-sm text-gray-600">核心算法体积≤30MB，适配≥800元智能手机，弱网络环境支持离线拍摄后同步</p>
+                    </div>
+                    <!-- 快速报告生成 -->
+                    <div class="text-center p-6 bg-starGray rounded-lg">
+                        <div class="bg-starBlue/10 w-16 h-16 rounded-full icon-container mx-auto mb-4">
+                            <i class="fa-solid fa-bolt-lightning text-starBlue text-2xl"></i>
+                        </div>
+                        <h4 class="font-bold mb-2">快速报告生成</h4>
+                        <p class="text-sm text-gray-600">视频上传后≤5分钟生成评估报告，含风险等级与5维行为特征解读，无需专业等待</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-center">
+                    <a href="二维码.jpg" class="bg-starBlue text-white px-6 py-3 rounded-md btn-hover inline-flex items-center" target="_blank">
+                        <i class="fa-solid fa-check-circle mr-2"></i> 立即进入微信小程序筛查
+                    </a>
+                </div>
+            </div>
+
+            <!-- 落地场景模块 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                <!-- 家庭自主筛查场景 -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden card-animate">
+                    <div class="h-48 bg-starBlue/20 icon-container"><i class="fa-solid fa-house-chimney text-starBlue text-5xl"></i></div>
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold mb-2">家庭自主筛查场景</h3>
+                        <p class="text-gray-600 mb-4">家长独立操作，无需专业知识，随时随地完成筛查</p>
+                        <div class="space-y-2 mb-4">
+                            <p><span class="font-semibold">操作门槛：</span>零专业知识要求</p>
+                            <p><span class="font-semibold">适用年龄：</span>0-6岁儿童</p>
+                            <p><span class="font-semibold">核心价值：</span>避免跨区域奔波，节省时间成本</p>
+                        </div>
+                        <button class="text-starBlue hover:underline" onclick="showGuide('family')">查看操作指南</button>
+                    </div>
+                </div>
+                <!-- 基层机构赋能场景 -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden card-animate">
+                    <div class="h-48 bg-starOrange/20 icon-container"><i class="fa-solid fa-hospital text-starOrange text-5xl"></i></div>
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold mb-2">基层机构赋能场景</h3>
+                        <p class="text-gray-600 mb-4">为县域/农村基层机构提供标准化筛查工具</p>
+                        <div class="space-y-2 mb-4">
+                            <p><span class="font-semibold">培训要求：</span>无需专业医护培训</p>
+                            <p><span class="font-semibold">覆盖提升：</span>填补70%基层筛查空白</p>
+                            <p><span class="font-semibold">核心价值：</span>快速开展规模化筛查工作</p>
+                        </div>
+                        <button class="text-starBlue hover:underline" onclick="showGuide('grassroots')">机构合作申请</button>
+                    </div>
+                </div>
+                <!-- 批量筛查支持场景 -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden card-animate">
+                    <div class="h-48 bg-green-100 icon-container"><i class="fa-solid fa-school text-green-600 text-5xl"></i></div>
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold mb-2">批量筛查支持场景</h3>
+                        <p class="text-gray-600 mb-4">适配学校、妇幼保健院等批量筛查需求</p>
+                        <div class="space-y-2 mb-4">
+                            <p><span class="font-semibold">功能支持：</span>多用户同时筛查+数据导出</p>
+                            <p><span class="font-semibold">效率提升：</span>筛查效率提升5倍</p>
+                            <p><span class="font-semibold">核心价值：</span>适合大范围公益筛查活动</p>
+                        </div>
+                        <button class="text-starBlue hover:underline" onclick="showGuide('batch')">批量筛查申请</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 核心技术指标 -->
+            <div class="bg-white rounded-lg p-8 shadow-md">
+                <h3 class="text-2xl font-bold mb-6 text-center">核心技术指标（量化验证）</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- 筛查耗时 -->
+                    <div class="text-center p-4">
+                        <div class="bg-starBlue/10 w-16 h-16 rounded-full icon-container mx-auto mb-4"><i class="fa-solid fa-stopwatch text-starBlue text-2xl"></i></div>
+                        <h4 class="font-bold mb-2">筛查耗时</h4>
+                        <p class="text-2xl font-bold text-starBlue mb-1">≤10分钟/例</p>
+                        <p class="text-sm text-gray-600">较传统筛查节省80%时间</p>
+                    </div>
+                    <!-- 上传流量 -->
+                    <div class="text-center p-4">
+                        <div class="bg-starBlue/10 w-16 h-16 rounded-full icon-container mx-auto mb-4"><i class="fa-solid fa-wifi text-starBlue text-2xl"></i></div>
+                        <h4 class="font-bold mb-2">上传流量</h4>
+                        <p class="text-2xl font-bold text-starBlue mb-1">≤50MB</p>
+                        <p class="text-sm text-gray-600">弱网络环境友好</p>
+                    </div>
+                    <!-- 可及性提升 -->
+                    <div class="text-center p-4">
+                        <div class="bg-starBlue/10 w-16 h-16 rounded-full icon-container mx-auto mb-4"><i class="fa-solid fa-chart-line text-starBlue text-2xl"></i></div>
+                        <h4 class="font-bold mb-2">可及性提升</h4>
+                        <p class="text-2xl font-bold text-starBlue mb-1">30%→90%</p>
+                        <p class="text-sm text-gray-600">基层筛查覆盖大幅提升</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 操作指南弹窗 -->
+    <div id="guideModal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-starBlue" id="guideTitle">操作指南</h3>
+                <button id="closeGuideModal" class="text-gray-500 hover:text-starDark text-xl transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="guideContent" class="prose max-w-none">
+                <!-- 动态填充内容 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 交互脚本 -->
+    <script>
+        // 弹窗相关元素
+        const guideModal = document.getElementById('guideModal');
+        const closeGuideModal = document.getElementById('closeGuideModal');
+        const guideTitle = document.getElementById('guideTitle');
+        const guideContent = document.getElementById('guideContent');
+
+        // 指南内容
+        const guideData = {
+            family: {
+                title: '家庭自主筛查操作指南',
+                content: `
+                    <h4 class="font-bold text-lg mb-2">1. 进入方式</h4>
+                    <p class="mb-3">微信搜索“星途早筛”小程序，无需注册即可使用</p>
+                    <h4 class="font-bold text-lg mb-2">2. 筛查流程</h4>
+                    <ul class="list-disc pl-5 mb-3 space-y-1">
+                        <li>选择儿童年龄与基本信息（2分钟）</li>
+                        <li>跟随游戏化引导拍摄10分钟互动视频（自动捕获关键行为）</li>
+                        <li>视频上传（支持弱网络离线上传）</li>
+                        <li>≤5分钟生成风险评估报告</li>
+                    </ul>
+                    <h4 class="font-bold text-lg mb-2">3. 注意事项</h4>
+                    <ul class="list-disc pl-5 mb-3 space-y-1">
+                        <li>拍摄环境保持光线充足，避免噪音干扰</li>
+                        <li>让儿童自然互动，无需刻意引导</li>
+                        <li>报告仅作风险提示，确诊需结合专业医师诊断</li>
+                    </ul>
+                `
+            },
+            grassroots: {
+                title: '基层机构赋能合作指南',
+                content: `
+                    <h4 class="font-bold text-lg mb-2">1. 合作流程</h4>
+                    <ul class="list-disc pl-5 mb-3 space-y-1">
+                        <li>提交机构资质申请（营业执照+医疗机构执业许可证）</li>
+                        <li>平台审核（3个工作日内反馈）</li>
+                        <li>免费获取筛查工具授权与操作培训</li>
+                        <li>开展筛查工作，数据实时同步至云端</li>
+                    </ul>
+                    <h4 class="font-bold text-lg mb-2">2. 支持服务</h4>
+                    <ul class="list-disc pl-5 mb-3 space-y-1">
+                        <li>免费操作培训（线上+线下结合）</li>
+                        <li>技术支持团队24小时响应</li>
+                        <li>筛查数据集中管理与导出功能</li>
+                        <li>优先对接康复机构资源</li>
+                    </ul>
+                    <h4 class="font-bold text-lg mb-2">3. 申请条件</h4>
+                    <ul class="list-disc pl-5 mb-3 space-y-1">
+                        <li>县域及以下基层卫生机构/妇幼保健院</li>
+                        <li>具备基本办公设备与网络条件</li>
+                        <li>有专人负责筛查组织工作</li>
+                    </ul>
+                `,
+            },
+            batch: {
+                title: '批量筛查申请指南',
+                content: `
+                    <h4 class="font-bold text-lg mb-2">1. 适用场景</h4>
+                    <p class="mb-3">学校、幼儿园、公益组织大规模筛查活动</p>
+                    <h4 class="font-bold text-lg mb-2">申请流程</h4>
+                    <ul class="list-disc pl-5 mb-3 space-y-1">
+                        <li>提前7个工作日提交批量筛查申请（含人数、时间、地点）</li>
+                        <li>平台配置专属筛查通道与数据管理权限</li>
+                        <li>提供批量导入模板，快速录入筛查对象信息</li>
+                        <li>筛查完成后生成汇总报告与明细数据</li>
+                    </ul>
+                    <h4 class="font-bold text-lg mb-2">技术支持</h4>
+                    <ul class="list-disc pl-5 mb-3 space-y-1">
+                        <li>支持多设备同时登录使用</li>
+                        <li>离线筛查模式，无网络环境也可开展</li>
+                        <li>专人全程技术支持，确保筛查顺利</li>
+                        <li>公益活动可申请免费技术支持</li>
+                    </ul>
+                `
+            }
+        };
+
+        // 显示指南弹窗
+        function showGuide(type) {
+            const guide = guideData[type];
+            guideTitle.textContent = guide.title;
+            guideContent.innerHTML = guide.content;
+            guideModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 关闭弹窗
+        closeGuideModal.addEventListener('click', () => {
+            guideModal.classList.remove('active');
+            document.body.style.overflow = '';
+        });
+
+        // 点击弹窗背景关闭
+        guideModal.addEventListener('click', (e) => {
+            if (e.target === guideModal) {
+                guideModal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+    </script>
+        <!-- 6. 传统筛查 vs 星途筛查 -->
+        <section id="volunteer" class="py-16 bg-white">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold mb-4">传统筛查 vs 星途筛查</h2>
+                    <p class="max-w-2xl mx-auto text-gray-600">星途创造创新，引领早筛未来</p>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-12">
+                    <!-- 传统筛查卡片 -->
+                    <div class="bg-starGray rounded-lg p-8 card-animate border-l-4 border-gray-400">
+                        <h3 class="text-2xl font-bold mb-6 flex items-center">
+                            <i class="fa fa-history text-gray-500 mr-3"></i>传统筛查
+                        </h3>
+                        <div class="space-y-6">
+                            <div>
+                                <h4 class="font-bold text-lg mb-3 text-gray-700">核心痛点</h4>
+                                <ul class="space-y-3">
+                                    <li class="flex items-start">
+                                        <i class="fa fa-times-circle text-red-500 mt-1 mr-2"></i>
+                                        <div>
+                                            <span class="font-semibold">筛查门槛高：</span>
+                                            <span class="text-gray-600">依赖专业医师+复杂量表，家庭需排队3-7天，农村家庭跨区域奔波，70%家庭"想筛却筛不了"</span>
+                                        </div>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fa fa-times-circle text-red-500 mt-1 mr-2"></i>
+                                        <div>
+                                            <span class="font-semibold">精准度低：</span>
+                                            <span class="text-gray-600">假阳性率20%-30%，高功能自闭症漏诊率超30%，易与多动症、智力障碍混淆</span>
+                                        </div>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fa fa-times-circle text-red-500 mt-1 mr-2"></i>
+                                        <div>
+                                            <span class="font-semibold">衔接断裂：</span>
+                                            <span class="text-gray-600">确诊后需重复评估（耗时2-3天），85%为通用干预方案，无个性化适配</span>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg mb-3 text-gray-700">关键指标</h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="bg-white p-4 rounded-lg shadow-sm">
+                                        <p class="text-sm text-gray-500">识别准确率</p>
+                                        <p class="text-2xl font-bold text-gray-600">75.3%</p>
+                                    </div>
+                                    <div class="bg-white p-4 rounded-lg shadow-sm">
+                                        <p class="text-sm text-gray-500">干预启动周期</p>
+                                        <p class="text-2xl font-bold text-gray-600">7天</p>
+                                    </div>
+                                    <div class="bg-white p-4 rounded-lg shadow-sm">
+                                        <p class="text-sm text-gray-500">方案适配率</p>
+                                        <p class="text-2xl font-bold text-gray-600">60.5%</p>
+                                    </div>
+                                    <div class="bg-white p-4 rounded-lg shadow-sm">
+                                        <p class="text-sm text-gray-500">基层可及性</p>
+                                        <p class="text-2xl font-bold text-gray-600">30%</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 星途筛查卡片 -->
+                    <div class="bg-starGray rounded-lg p-8 card-animate border-l-4 border-starBlue relative overflow-hidden">
+                        <!-- 亮点标签 -->
+                        <div class="absolute top-0 right-0 bg-starBlue text-white text-sm font-bold px-4 py-1">
+                            技术创新
+                        </div>
+                        <h3 class="text-2xl font-bold mb-6 flex items-center">
+                            <i class="fa fa-rocket text-starBlue mr-3"></i>星途筛查
+                        </h3>
+                        <div class="space-y-6">
+                            <div>
+                                <h4 class="font-bold text-lg mb-3 text-starBlue">核心优势</h4>
+                                <ul class="space-y-3">
+                                    <li class="flex items-start">
+                                        <i class="fa fa-check-circle text-green-500 mt-1 mr-2"></i>
+                                        <div>
+                                            <span class="font-semibold">轻量化自主筛查：</span>
+                                            <span class="text-gray-600">微信小程序载体，10分钟家庭自主完成，无需专业知识，基层可及性提升至90%</span>
+                                        </div>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fa fa-check-circle text-green-500 mt-1 mr-2"></i>
+                                        <div>
+                                            <span class="font-semibold">AI精准识别：</span>
+                                            <span class="text-gray-600">基于1000+临床样本训练，5维核心行为特征提取，漏诊率＜7%，区分准确率88%+</span>
+                                        </div>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fa fa-check-circle text-green-500 mt-1 mr-2"></i>
+                                        <div>
+                                            <span class="font-semibold">数据闭环对接：</span>
+                                            <span class="text-gray-600">标准化接口实时同步数据，跳过重复评估，自动匹配个性化方案，干预启动周期缩短83%</span>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg mb-3 text-starBlue">关键指标</h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="bg-white p-4 rounded-lg shadow-sm border border-starBlue/30">
+                                        <p class="text-sm text-gray-500">AI识别准确率</p>
+                                        <p class="text-2xl font-bold text-starBlue">92%</p>
+                                        <p class="text-xs text-green-500">↑16.7%</p>
+                                    </div>
+                                    <div class="bg-white p-4 rounded-lg shadow-sm border border-starBlue/30">
+                                        <p class="text-sm text-gray-500">干预启动周期</p>
+                                        <p class="text-2xl font-bold text-starBlue">24小时</p>
+                                        <p class="text-xs text-green-500">↓83%</p>
+                                    </div>
+                                    <div class="bg-white p-4 rounded-lg shadow-sm border border-starBlue/30">
+                                        <p class="text-sm text-gray-500">个性化方案适配率</p>
+                                        <p class="text-2xl font-bold text-starBlue">90%+</p>
+                                        <p class="text-xs text-green-500">↑29.5%</p>
+                                    </div>
+                                    <div class="bg-white p-4 rounded-lg shadow-sm border border-starBlue/30">
+                                        <p class="text-sm text-gray-500">基层可及性</p>
+                                        <p class="text-2xl font-bold text-starBlue">90%</p>
+                                        <p class="text-xs text-green-500">↑60%</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- 7. 公益宣传模块 -->
+        <section id="publicity" class="py-16 bg-white">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold mb-4">公益宣传行动</h2>
+                    <p class="max-w-2xl mx-auto text-gray-600">响应世界自闭症日，传递“理解、接纳、支持”理念，扩大项目社会影响力</p>
+                </div>
+                <div class="bg-gradient-to-r from-starBlue/90 to-starBlue mb-16 rounded-xl overflow-hidden shadow-lg">
+                    <div class="grid grid-cols-1 lg:grid-cols-2">
+                        <!-- 左侧内容（保持原有class和样式不变） -->
+                        <div class="p-8 lg:p-12 text-white">
+                            <span class="inline-block bg-white/20 backdrop-blur-sm text-white text-sm px-3 py-1 rounded-full mb-4">2025年4月2日世界自闭症日发起</span>
+                            <h3 class="text-3xl font-bold mb-6">#星途100天#公益挑战</h3>
+                            <p class="mb-8 text-white/90">号召公众连续100天参与公益行动，提升自闭症群体社会关注度，目标募集10万人参与</p>
+                            <div class="space-y-4 mb-8">
+                                <div class="flex items-start">
+                                    <div class="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1 mr-4">
+                                        <span class="font-bold">1</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold mb-1">学习科普知识</h4>
+                                        <p class="text-sm text-white/80">每日阅读1篇自闭症科普内容（平台每日推送）</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1 mr-4">
+                                        <span class="font-bold">2</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold mb-1">转发公益内容</h4>
+                                        <p class="text-sm text-white/80">分享项目动态至社交平台，带动更多人关注</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1 mr-4">
+                                        <span class="font-bold">3</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold mb-1">参与线下活动</h4>
+                                        <p class="text-sm text-white/80">报名项目组织的自闭症儿童互动活动（如手工坊、融合游戏）</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-6 mb-6">
+                                <div>
+                                    <p class="text-4xl font-bold mb-1" id="challengePeople" data-target="0">0</p>
+                                    <p class="text-sm text-white/80">已参与家长人数</p>
+                                </div>
+                                <div>
+                                    <p class="text-4xl font-bold mb-1" id="challengeDays" data-target="0">0</p>
+                                    <p class="text-sm text-white/80">当前挑战天数</p>
+                                </div>
+                                <div>
+                                    <p class="text-4xl font-bold mb-1" id="checkinCount" data-target="58102">0</p>
+                                    <p class="text-sm text-white/80">累计打卡数</p>
+                                </div>
+                            </div>
+                            <button id="checkinBtn" class="bg-starOrange text-white px-8 py-3 rounded-md btn-hover inline-block">立即参与打卡</button>
+                            <div style="margin: 12px;">
+                                <div class="flex items-start">
+                                    <div class="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1 mr-4">
+                                        <span class="font-bold">1</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold mb-1">来自齐齐哈尔的家长：</h4>
+                                        <p class="text-sm text-white/80">第35天，孩子能主动和小朋友打招呼了</p>
+                                    </div>
+                                    <div class="flex items-start">
+                                    <div class="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1 mr-4">
+                                        <span class="font-bold">2</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold mb-1">来自佳木斯的家长：</h4>
+                                        <p class="text-sm text-white/80">第62天，语言表达流畅度明显提升，感谢项目提供的免费课程</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1 mr-4">
+                                        <span class="font-bold">3</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold mb-1">来自大庆的家长：</h4>
+                                        <p class="text-sm text-white/80">报名项目组织的自闭症儿童互动活动（如手工坊、融合游戏）</p>
+                                    </div>
+                                </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 右侧内容 - 保留原有class，新增内联style调整位置 -->
+                        <div class="bg-starGray rounded-lg p-8 card-animate flex flex-col" 
+                            style="margin: 2rem; height: 80%; margin-top: auto; margin-bottom: auto; justify-content: center; align-items: flex-start;">
+                            <h3 class="text-title font-bold mb-4" style="font-size: 40px;">贫困家庭免费筛查</h3>
+                            <p class="text-body text-gray-600 mb-6">为经济困难家庭提供免费AI筛查+康复对接服务</p>
+                            <ul class="space-y-3 mb-6">
+                                <li class="flex items-start">
+                                    <i class="fa fa-check-circle text-starOrange mt-1 mr-2"></i>
+                                    <span class="text-body">免费AI筛查服务</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fa fa-check-circle text-starOrange mt-1 mr-2"></i>
+                                    <span class="text-body">优先匹配公益康复机构</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fa fa-check-circle text-starOrange mt-1 mr-2"></i>
+                                    <span class="text-body">全程志愿者一对一指导</span>
+                                </li>
+                            </ul>
+                            
+                            <button onclick="openContactModal()" class="inline-block bg-starOrange text-white text-lg font-bold px-8 py-3 rounded-md btn-hover shadow-lg ">
+                        申请免费筛查
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-16">
+                <h3 class="text-2xl font-bold mb-8 text-center">公益故事专栏</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="bg-starGray rounded-lg overflow-hidden shadow-md card-animate">
+                        <img src="去除图片水印.png" alt="自闭症早筛重要性" class="w-full h-48 object-cover">
+                        <div class="p-6">
+                    
+                            <h4 class="text-xl font-bold mb-3 mt-2">《来自绥化的小宇：从“不说话”到“爱交流”》</h4>
+                            <p class="text-gray-600 mb-4 text-sm">2岁时经网站筛查为语言发育高风险，通过公益补贴对接哈医大附属第二医院干预...</p>
+                            <a href="https://m.baidu.com/bh/m/detail/ar_5242075630427127544" target="_blank" class="text-starBlue hover:underline flex items-center">
+                                    阅读全文 <i class="fa fa-long-arrow-right ml-2"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="bg-starGray rounded-lg overflow-hidden shadow-md card-animate">
+                        <img src="https://picsum.photos/id/64/600/400" alt="自闭症社交沟通" class="w-full h-48 object-cover">
+                        <div class="p-6">
+                                
+                            <h4 class="text-xl font-bold mb-3 mt-2">《鹤岗的朵朵：贫困家庭的康复希望》</h4>
+                            <p class="text-gray-600 mb-4 text-sm">低保家庭儿童，经补贴申请后免费在黑龙江省康复中心干预，现在能正常上幼儿园，家长特意送来锦旗...</p>
+                            <a href="https://www.fh21.com.cn/article/view/7qjzrlg8kms6g1l.html" target="_blank" class="text-starBlue hover:underline flex items-center">
+                                    阅读全文 <i class="fa fa-long-arrow-right ml-2"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="bg-starGray rounded-lg overflow-hidden shadow-md card-animate">
+                        <img src="https://img95.699pic.com/photo/50571/9732.jpg_wh300.jpg!/fh/300/quality/90" alt="自闭症就业案例" class="w-full h-48 object-cover">
+                        <div class="p-6">
+                            <h4 class="text-xl font-bold mb-3 mt-2">《志愿者小李的日记：陪伴乡村儿童成长》</h4>
+                            <p class="text-gray-600 mb-4 text-sm">记录哈医大在读研究生志愿者，每月下乡为留守儿童做筛查和基础康复指导的经历...</p>
+                            <a href="https://www.hangzhou.gov.cn/art/2024/4/2/art_812270_59095414.html" target="_blank" class="text-starBlue hover:underline flex items-center">
+                                    阅读全文 <i class="fa fa-long-arrow-right ml-2"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-starGray rounded-xl p-8">
+                    <h3 class="text-2xl font-bold mb-8 text-center">公益宣传物料下载</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="bg-white rounded-lg p-6 text-center card-animate">
+                            <div class="text-starBlue text-4xl mb-4"><i class="fa fa-file-image-o"></i></div>
+                            <h4 class="font-bold mb-2">地铁海报设计</h4>
+                            <p class="text-sm text-gray-600 mb-4">适合线下张贴的公益海报，含项目核心数据</p>
+                            <a href="https://www.51miz.com/muban/787670.html?keyword_id=5712786&formatedPlateId=100" class="text-starBlue hover:underline flex items-center justify-center" target="_blank">
+                                下载 <i class="fa fa-download ml-2"></i>
+                            </a>
+                        </div>
+                        <div class="bg-white rounded-lg p-6 text-center card-animate">
+                            <div class="text-starBlue text-4xl mb-4"><i class="fa fa-file-video-o"></i></div>
+                            <h4 class="font-bold mb-2">科普短视频</h4>
+                            <p class="text-sm text-gray-600 mb-4">1分钟自闭症知识动画，适合社交平台传播</p>
+                            <a href="https://www.douyin.com/root/search/%E8%87%AA%E9%97%AD%E7%97%87%E7%A7%91%E6%99%AE%E8%A7%86%E9%A2%91?aid=08dfd1fb-897c-4157-becc-ef98f295a624&modal_id=6950809795859352862&type=general" class="text-starBlue hover:underline flex items-center justify-center" target="_blank">
+                                下载 <i class="fa fa-download ml-2"></i>
+                            </a>
+                        </div>
+                        <div class="bg-white rounded-lg p-6 text-center card-animate">
+                            <div class="text-starBlue text-4xl mb-4"><i class="fa fa-file-text-o"></i></div>
+                            <h4 class="font-bold mb-2">企业宣讲PPT</h4>
+                            <p class="text-sm text-gray-600 mb-4">面向企业的合作推广PPT，含CSR价值说明</p>
+                            <a href="https://www.1ppt.com/article/137734.html" class="text-starBlue hover:underline flex items-center justify-center" target="_blank">
+                                下载 <i class="fa fa-download ml-2"></i>
+                            </a>
+                        </div>
+                        <div class="bg-white rounded-lg p-6 text-center card-animate">
+                            <div class="text-starBlue text-4xl mb-4"><i class="fa fa-share-alt"></i></div>
+                            <h4 class="font-bold mb-2">社交传播文案</h4>
+                            <p class="text-sm text-gray-600 mb-4">适配微信/微博的宣传文案，含话题标签</p>
+                            <a href="https://wenku.baidu.com/aggs/79e3370316fc700abb68fcde.html?_wkts_=1769071658916" class="text-starBlue hover:underline flex items-center justify-center" target="_blank">
+                                下载 <i class="fa fa-download ml-2"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="text-center" style="margin: 20px;">
+                     <a href="https://zhuanlan.zhihu.com/p/13831485993" class="inline-block bg-starBlue text-white text-body py-2 px-6 rounded-md btn-hover" target="_blank">
+                                申请免费筛查
+                            </a>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+       <!-- ========== 修复后的康复机构合作模块 ========== -->
+        <section class="py-16 bg-white">
+            <div class="container mx-auto px-4">
+                <!-- 顶部Banner -->
+                <div class="bg-starBlue/5 rounded-xl p-8 lg:p-12 mb-16 text-center">
+                    <h2 class="text-3xl font-bold mb-4">携手专业康复机构 共筑自闭症精准干预生态</h2>
+                    <p class="max-w-2xl mx-auto text-gray-600">AI早筛技术落地一线，赋能康复服务提质增效</p>
+                    <div class="mt-8">
+                        <img src="拼接图.jpg" alt="机构合作实景图" class="w-full h-64 lg:h-80 object-cover rounded-lg shadow-md" style="object-position: center;">
+                        <p class="text-sm text-gray-500 mt-2">成华爱慧、成都大鱼、善工家园三家机构训练场景实景拼接图</p>
+                    </div>
+                </div>
+
+                <!-- 机构卡片区域（三卡并列） -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+                    <!-- 成华爱慧特殊儿童关爱中心 -->
+                    <div class="bg-starGray rounded-lg overflow-hidden shadow-md card-animate">
+                        <!-- 卡片上部图片 -->
+                        <div class="h-48 overflow-hidden">
+                            <img src="成华爱.jpg" alt="成华爱慧训练场景" class="w-full h-full object-cover transition-transform duration-500 hover:scale-110">
+                        </div>
+                        <!-- 卡片下部信息 -->
+                        <div class="p-6 text-center">
+                            <h3 class="text-xl font-bold mb-4 text-starDark">成华爱慧特殊儿童关爱中心</h3>
+                            <button class="institution-detail-btn bg-starBlue text-white px-6 py-2 rounded-md btn-hover" data-id="institution1">
+                                查看详细信息
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 成都大鱼儿童关爱中心 -->
+                    <div class="bg-starGray rounded-lg overflow-hidden shadow-md card-animate">
+                        <!-- 卡片上部图片 -->
+                        <div class="h-48 overflow-hidden">
+                            <img src="成华大.jpg" alt="成都大鱼训练场景" class="w-full h-full object-cover transition-transform duration-500 hover:scale-110">
+                        </div>
+                        <!-- 卡片下部信息 -->
+                        <div class="p-6 text-center">
+                            <h3 class="text-xl font-bold mb-4 text-starDark">成都大鱼儿童关爱中心</h3>
+                            <button class="institution-detail-btn bg-starBlue text-white px-6 py-2 rounded-md btn-hover" data-id="institution2">
+                                查看详细信息
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 善工家园助残中心 -->
+                    <div class="bg-starGray rounded-lg overflow-hidden shadow-md card-animate">
+                        <!-- 卡片上部图片 -->
+                        <div class="h-48 overflow-hidden">
+                            <img src="善工家.jpg" alt="善工家园训练场景" class="w-full h-full object-cover transition-transform duration-500 hover:scale-110">
+                        </div>
+                        <!-- 卡片下部信息 -->
+                        <div class="p-6 text-center">
+                            <h3 class="text-xl font-bold mb-4 text-starDark">善工家园助残中心</h3>
+                            <button class="institution-detail-btn bg-starBlue text-white px-6 py-2 rounded-md btn-hover" data-id="institution3">
+                                查看详细信息
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 合作价值区 -->
+                <div class="bg-starBlue/10 rounded-xl p-8 text-center mb-16">
+                    <p class="text-xl font-medium text-starDark">项目AI技术为机构提效，机构一线资源为项目赋能，实现双向共赢</p>
+                </div>
+
+                <!-- CTA入口 -->
+                <div class="text-center">
+                    <button onclick="openContactModal()" class="inline-block bg-starOrange text-white text-lg font-bold px-8 py-3 rounded-md btn-hover shadow-lg">
+                        机构合作洽谈
+                    </button>
+                    <p class="text-sm text-gray-500 mt-2">点击跳转至合作意向提交表单页面</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 机构详细信息弹窗（优化后） -->
+        <div id="institutionModal" class="modal-backdrop">
+            <div class="modal-content job-detail">
+                <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+                    <h3 class="text-2xl font-bold text-starBlue" id="modalTitle">机构详细信息</h3>
+                    <button id="closeInstitutionModal" class="text-gray-500 hover:text-starDark text-xl transition-colors p-2 rounded-full hover:bg-gray-100">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+                <div id="modalContent" class="prose max-w-none space-y-6">
+                    <!-- 动态填充机构详情 -->
+                </div>
+                <div class="mt-8 pt-4 border-t border-gray-100 text-right">
+                    <button onclick="closeInstitutionModalFunc()" class="bg-gray-100 text-gray-700 px-6 py-2 rounded-md btn-hover mr-2">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 机构详情弹窗交互脚本（优化后） -->
+        <script>
+            // 机构详情数据
+            const institutionData = {
+                institution1: {
+                    title: "成华爱慧特殊儿童关爱中心",
+                    content: `
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-bold text-lg text-starBlue mb-2">擅长</h4>
+                                <p class="text-gray-700">自闭症儿童社交与语言综合干预</p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg text-starBlue mb-2">家长评价</h4>
+                                <p class="text-gray-700">孩子干预4个月后能主动回应指令，社交互动意愿明显增强，老师会定制个性化训练计划</p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg text-starBlue mb-2">康复数据</h4>
+                                <p class="text-gray-700">近1年服务186名儿童，干预有效率91%</p>
+                            </div>
+                           
+                        </div>
+                    `
+                },
+                institution2: {
+                    title: "成都大鱼儿童关爱中心",
+                    content: `
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-bold text-lg text-starBlue mb-2">特色</h4>
+                                <p class="text-gray-700">感觉统合训练+家庭同步指导</p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg text-starBlue mb-2">家长评价</h4>
+                                <p class="text-gray-700">不仅孩子进步快，还教会我们在家做康复训练的方法，实用性超强</p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg text-starBlue mb-2">康复数据</h4>
+                                <p class="text-gray-700">88%的儿童干预5个月后感觉统合能力达标，融入幼儿园比例提升75%</p>
+                            </div>
+                            
+                        </div>
+                    `
+                },
+                institution3: {
+                    title: "善工家园助残中心",
+                    content: `
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-bold text-lg text-starBlue mb-2">公益属性</h4>
+                                <p class="text-gray-700">为困境儿童、残疾儿童提供最高80%费用减免</p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg text-starBlue mb-2">家长评价</h4>
+                                <p class="text-gray-700">公益初心不改，康复设备齐全，老师有爱心有专业度，帮我们解决了大难题</p>
+                            </div>
+                        </div>
+                    `
+                }
+            };
+
+          // 打开机构详情弹窗
+            function openInstitutionModal(id) {
+                const data = institutionData[id];
+                document.getElementById('modalTitle').textContent = data.title;
+                document.getElementById('modalContent').innerHTML = data.content;
+                document.getElementById('institutionModal').classList.add('active');
+                document.body.style.overflow = 'hidden';
+                // 关闭移动端菜单（如果打开）
+                closeMenu();
+            }
+
+            // 关闭机构详情弹窗
+            function closeInstitutionModalFunc() {
+                document.getElementById('institutionModal').classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+
+
+            // 绑定机构详情按钮事件
+            document.addEventListener('DOMContentLoaded', function() {
+                // 机构详情按钮
+                const detailBtns = document.querySelectorAll('.institution-detail-btn');
+                detailBtns.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        openInstitutionModal(id);
+                    });
+                });
+
+                // 关闭机构弹窗按钮
+                document.getElementById('closeInstitutionModal').addEventListener('click', closeInstitutionModalFunc);
+                
+                // 点击弹窗背景关闭机构弹窗
+                document.getElementById('institutionModal').addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeInstitutionModalFunc();
+                    }
+                });
+
+                // 移动端菜单交互
+                const menuBtn = document.getElementById('menuBtn');
+                const closeMenuBtn = document.getElementById('closeMenuBtn');
+                const mobileNavMenu = document.getElementById('mobileNavMenu');
+                const menuOverlay = document.getElementById('menuOverlay');
+
+                function openMenu() {
+                    mobileNavMenu.classList.add('active');
+                    menuOverlay.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                }
+
+                function closeMenu() {
+                    mobileNavMenu.classList.remove('active');
+                    menuOverlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+
+                menuBtn.addEventListener('click', openMenu);
+                closeMenuBtn.addEventListener('click', closeMenu);
+                menuOverlay.addEventListener('click', closeMenu);
+
+                // 联系我们按钮交互
+                const contactBtn = document.getElementById('contactBtn');
+                const mobileContactBtn = document.getElementById('mobileContactBtn');
+                const closeModalBtn = document.getElementById('closeModal');
+                const contactModal = document.getElementById('contactModal');
+
+                function closeContactModal() {
+                    contactModal.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+
+                contactBtn.addEventListener('click', openContactModal);
+                mobileContactBtn.addEventListener('click', function() {
+                    closeMenu();
+                    openContactModal();
+                });
+                closeModalBtn.addEventListener('click', closeContactModal);
+
+                // 点击联系弹窗背景关闭
+                contactModal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeContactModal();
+                    }
+                });
+
+                // 表单提交处理
+                const contactForm = document.getElementById('contactForm');
+                contactForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    // 简单表单验证
+                    const name = document.getElementById('name').value;
+                    const phone = document.getElementById('phone').value;
+                    const email = document.getElementById('email').value;
+
+                    if (!name || !phone || !email) {
+                        alert('请填写完整的必填信息');
+                        return;
+                    }
+
+                    // 模拟提交成功
+                    alert('提交成功！我们会尽快与您联系');
+                    contactForm.reset();
+                    closeContactModal();
+                    // 打开欢迎弹窗
+                    document.getElementById('welcomeModal').classList.add('active');
+                    
+                    // 5秒后自动关闭欢迎弹窗
+                    setTimeout(() => {
+                        document.getElementById('welcomeModal').classList.remove('active');
+                    }, 5000);
+                });
+
+                // 关闭欢迎弹窗
+                document.getElementById('closeWelcomeModal').addEventListener('click', function() {
+                    document.getElementById('welcomeModal').classList.remove('active');
+                });
+
+                // 数字滚动动画
+                function animateNumber(elementId, target, duration = 2000) {
+                    const element = document.getElementById(elementId);
+                    if (!element) return;
+                    
+                    const start = 0;
+                    const increment = target / (duration / 16);
+                    let current = start;
+                    
+                    const timer = setInterval(() => {
+                        current += increment;
+                        if (current >= target) {
+                            clearInterval(timer);
+                            current = target;
+                        }
+                        
+                        // 根据是否包含百分号处理显示
+                        if (elementId === 'accuracy' || elementId === 'jobTarget') {
+                            element.textContent = Math.floor(current) + '%';
+                        } else {
+                            element.textContent = Math.floor(current).toLocaleString();
+                        }
+                    }, 16);
+                }
+
+                // 页面加载后执行数字动画
+                window.addEventListener('load', function() {
+                    animateNumber('accuracy', 92);
+                    animateNumber('servedKids', 1000);
+                    animateNumber('volunteerCount', 500);
+                    animateNumber('jobTarget', 88);
+                    animateNumber('cityCount', 13);
+                    animateNumber('orgCount', 17);
+                    animateNumber('challengePeople', 8542);
+                    animateNumber('challengeDays', 78);
+                    animateNumber('checkinCount', 58102);
+                });
+
+                // 志愿者报名按钮
+                document.getElementById('joinUsBtn').addEventListener('click', function() {
+                    openContactModal();
+                    document.getElementById('message').value = '我想报名成为志愿者';
+                });
+
+                // 打卡按钮
+                document.getElementById('checkinBtn').addEventListener('click', function() {
+                    alert('打卡成功！感谢您的公益参与');
+                    // 更新打卡数
+                    const checkinCount = document.getElementById('checkinCount');
+                    const current = parseInt(checkinCount.textContent.replace(/,/g, ''));
+                    checkinCount.textContent = (current + 1).toLocaleString();
+                });
+            });
+        </script>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-starDark text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <div class="flex items-center space-x-2 mb-4">
+                        <i class="fa fa-star text-starOrange text-2xl"></i>
+                        <span class="text-xl font-bold text-starBlue">星途计划</span>
+                    </div>
+                    <p class="text-gray-400 mb-4">让每颗“星星”都有清晰的未来</p>
+                    <div >
+                        <h4 class="text-gray-400 mb-4">哈医大附属儿童发育咨询专线：</h4>
+                        <p class="text-gray-400 mb-4 ">0451-8888XXXX</p>
+                        <h4 class="text-gray-400 mb-4">服务时间：</h4>
+                        <p class="text-gray-400 mb-4">9:00-17:00</p>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-lg font-bold mb-4">快速链接</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#home" class="text-gray-400 hover:text-white transition-colors">首页</a></li>
+                        <li><a href="#screening" class="text-gray-400 hover:text-white transition-colors">AI早筛</a></li>
+                        <li><a href="#intervention" class="text-gray-400 hover:text-white transition-colors">匹配系统</a></li>
+                        <li><a href="#employment" class="text-gray-400 hover:text-white transition-colors">家庭筛查</a></li>
+                        <li><a href="#volunteer" class="text-gray-400 hover:text-white transition-colors">对比优势</a></li>
+                        <li><a href="#publicity" class="text-gray-400 hover:text-white transition-colors">公益宣传</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-bold mb-4">联系我们</h4>
+                    <ul class="space-y-2">
+                        <li class="flex items-center text-gray-400"><i class="fa fa-phone mr-2"></i> 400-123-4567</li>
+                        <li class="flex items-center text-gray-400"><i class="fa fa-envelope mr-2"></i> contact@xingtu.org</li>
+                        <li class="flex items-center text-gray-400"><i class="fa fa-map-marker mr-2"></i> 北京市朝阳区公益大厦10层</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-bold mb-4">关注我们</h4>
+                    <p class="text-gray-400 mb-4">扫码关注公众号，获取最新公益动态</p>
+                    <div class="bg-white p-2 inline-block rounded-md">
+                        <img src="https://picsum.photos/100/100" alt="公众号二维码" class="w-24 h-24">
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 pt-8 text-center text-gray-500 text-sm">
+                <p>© 2025 星途计划 自闭症公益项目 版权所有 | 京ICP备12345678号</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 核心交互JS（移除导航栏滚动逻辑，保留其他功能） -->
+    <script>
+        // ========== 数字滚动增长函数 ==========
+        function animateNumber(element, targetValue, duration = 2000, suffix = '') {
+            // 如果元素不存在或目标值无效，直接返回
+            if (!element || isNaN(targetValue)) return;
+            
+            const startValue = 0;
+            const increment = targetValue / (duration / 16); // 60fps (1000/60 ≈ 16ms)
+            let currentValue = startValue;
+            
+            // 创建动画帧
+            const animate = () => {
+                currentValue += increment;
+                
+                // 确保不超过目标值
+                if (currentValue >= targetValue) {
+                    currentValue = targetValue;
+                    element.textContent = targetValue + suffix;
+                    return;
+                }
+                
+                // 更新显示值（根据是否为整数决定是否取整）
+                const displayValue = Number.isInteger(targetValue) 
+                    ? Math.floor(currentValue) 
+                    : currentValue.toFixed(0);
+                
+                element.textContent = displayValue + suffix;
+                
+                // 继续下一帧
+                requestAnimationFrame(animate);
+            };
+            
+            // 启动动画
+            requestAnimationFrame(animate);
+        }
+
+        // ========== 初始化数字动画 ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            // 核心数据卡片数字动画
+            const accuracy = document.getElementById('accuracy');
+            const servedKids = document.getElementById('servedKids');
+            const volunteerCount = document.getElementById('volunteerCount');
+            const jobTarget = document.getElementById('jobTarget');
+            const cityCount = document.getElementById('cityCount');
+            const orgCount = document.getElementById('orgCount');
+            const checkinCount = document.getElementById('checkinCount');
+            
+            // 为不同数字设置不同的后缀和动画时长
+            if (accuracy) animateNumber(accuracy, parseInt(accuracy.dataset.target), 2000, '%');
+            if (servedKids) animateNumber(servedKids, parseInt(servedKids.dataset.target), 2500, '+');
+            if (volunteerCount) animateNumber(volunteerCount, parseInt(volunteerCount.dataset.target), 3000, '+');
+            if (jobTarget) animateNumber(jobTarget, parseInt(jobTarget.dataset.target), 2000, '%');
+            if (checkinCount) animateNumber(checkinCount, parseInt(checkinCount.dataset.target), 3500);
+            
+            // 初始化挑战人数和天数为0（打卡时才增长）
+            document.getElementById('challengePeople').textContent = '0';
+            document.getElementById('challengeDays').textContent = '0';
+        });
+
+        // ========== 1. 移动端右侧菜单交互 ==========
+        const menuBtn = document.getElementById('menuBtn');
+        const closeMenuBtn = document.getElementById('closeMenuBtn');
+        const mobileNavMenu = document.getElementById('mobileNavMenu');
+        const menuOverlay = document.getElementById('menuOverlay');
+
+        // 打开菜单
+        menuBtn.addEventListener('click', () => {
+            mobileNavMenu.classList.add('active');
+            menuOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden'; // 禁止页面滚动
+        });
+
+        // 关闭菜单
+        function closeMenu() {
+            mobileNavMenu.classList.remove('active');
+            menuOverlay.classList.remove('active');
+            document.body.style.overflow = ''; // 恢复页面滚动
+        }
+
+        closeMenuBtn.addEventListener('click', closeMenu);
+        menuOverlay.addEventListener('click', closeMenu);
+
+        // 菜单链接点击关闭菜单
+        const mobileMenuLinks = mobileNavMenu.querySelectorAll('a');
+        mobileMenuLinks.forEach(link => {
+            link.addEventListener('click', closeMenu);
+        });
+
+        // ========== 2. 原有弹窗逻辑（保留） ==========
+        // 联系我们弹窗
+        const contactBtn = document.getElementById('contactBtn');
+        const mobileContactBtn = document.getElementById('mobileContactBtn');
+        const contactModal = document.getElementById('contactModal');
+        const closeModal = document.getElementById('closeModal');
+        const contactForm = document.getElementById('contactForm');
+
+        // 我们欢迎您弹窗
+    
+        const welcomeModal = document.getElementById('welcomeModal');
+        const closeWelcomeModal = document.getElementById('closeWelcomeModal');
+        // 打卡按钮
+        const checkinBtn = document.getElementById('checkinBtn');
+        const challengePeople = document.getElementById('challengePeople');
+        const challengeDays = document.getElementById('challengeDays');
+        const checkinCount = document.getElementById('checkinCount');
+
+        // 打开联系我们弹窗
+        function openContactModal() {
+            contactModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        contactBtn.addEventListener('click', openContactModal);
+        if (mobileContactBtn) {
+            mobileContactBtn.addEventListener('click', openContactModal);
+        }
+
+        // 关闭弹窗通用函数
+        function closeModalFunc(modal) {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // 关闭联系我们弹窗
+        closeModal.addEventListener('click', () => closeModalFunc(contactModal));
+        contactModal.addEventListener('click', (e) => {
+            if (e.target === contactModal) closeModalFunc(contactModal);
+        });
+
+       
+
+        // 关闭欢迎弹窗
+        closeWelcomeModal.addEventListener('click', () => closeModalFunc(welcomeModal));
+        welcomeModal.addEventListener('click', (e) => {
+            if (e.target === welcomeModal) closeModalFunc(welcomeModal);
+        });
+
+        // 打卡按钮逻辑
+        checkinBtn.addEventListener('click', () => {
+            try {
+                // 处理千分位分隔符
+                function parseNumber(text) {
+                    return parseInt(text.replace(/,/g, '')) || 0;
+                }
+                
+                // 更新打卡数
+                let currentCount = parseNumber(checkinCount.textContent);
+                const newCount = currentCount + 1;
+                animateNumber(checkinCount, newCount, 500); // 使用动画效果
+                
+                // 只有当天第一次打卡才增加参与人数
+                if (!localStorage.getItem('hasCheckedInToday')) {
+                    let currentPeople = parseNumber(challengePeople.textContent);
+                    const newPeople = currentPeople + 1;
+                    animateNumber(challengePeople, newPeople, 500);
+                    
+                    // 设置当天已打卡标记
+                    localStorage.setItem('hasCheckedInToday', 'true');
+                }
+                
+                // 基于实际日期计算挑战天数（更合理的逻辑）
+                const startDate = new Date('2025-04-02'); // 世界自闭症日
+                const today = new Date();
+                const diffTime = Math.abs(today - startDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const challengeDay = Math.min(diffDays, 100); // 不超过100天
+                
+                // 只有当天第一次打卡才更新挑战天数
+                if (challengeDay > parseNumber(challengeDays.textContent)) {
+                    animateNumber(challengeDays, challengeDay, 500);
+                }
+                
+                // 用户反馈
+                
+            } catch (error) {
+                console.error('打卡失败:', error);
+                alert('打卡失败，请稍后重试');
+            }
+        });
+
+        // 表单提交逻辑
+        contactForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            // 模拟表单提交
+            alert('您的申请已提交，我们将在24小时内与您联系！');
+            closeModalFunc(contactModal);
+            contactForm.reset();
+        });
+        
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetElement = document.querySelector(this.getAttribute('href'));
+                if (targetElement) {
+                    window.scrollTo({ top: targetElement.offsetTop - 80, behavior: 'smooth' });
+                    if (!navMenu.classList.contains('hidden')) navMenu.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
